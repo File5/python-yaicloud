@@ -55,7 +55,7 @@ class AccountStorage:
             return "<AccountRegistrationRequest captcha='{}'>".format(self.captcha_img_url)
 
     def __init__(self):
-        self.accounts = []
+        self.accounts = {}
 
     def get_registration_request(self):
         new_session = HTMLSession()
@@ -91,10 +91,10 @@ class AccountStorage:
         r = registration_request.session.post('https://passport.yandex.ru/registration', data)
         if not r.ok:
             raise RequestFailed()
-        self.accounts.append(Account(login, password, session=registration_request.session))
+        self.accounts[login] = Account(login, password, session=registration_request.session)
 
     def add_account(self, login, password):
-        self.accounts.append(Account(login, password))
+        self.accounts[login] = Account(login, password)
 
     def _get_random_password(self, length=16):
         characters = string.ascii_letters + string.digits
