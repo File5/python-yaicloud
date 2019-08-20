@@ -32,7 +32,10 @@ class Account:
         r = self.session.get('https://passport.yandex.ru/profile')
         if not r.ok:
             raise RequestFailed()
-        first_name = r.html.xpath('//div[@class="personal-info__first"]')[0].text
+        first_name_div = r.html.xpath('//div[@class="personal-info__first"]')
+        if len(first_name_div) < 1:
+            return None
+        first_name = first_name_div[0].text
         last_name = r.html.xpath('//div[@class="personal-info__last"]')[0].text
         return first_name + ' ' + last_name
 
@@ -62,11 +65,11 @@ class AccountStorage:
         captcha_key = r.html.xpath('//input[@name="captcha_key"]/@value')[0]
         captcha_img_url = r.html.xpath('//img[@class="captcha__image"]/@src')[0]
 
-        return AccountRegistrationRequest(new_session, track_id, captcha_key, captcha_img_url)
+        return AccountStorage.AccountRegistrationRequest(new_session, track_id, captcha_key, captcha_img_url)
 
     def register(self, registration_request, captcha_code, login=None, password=None):
         if login is None:
-            login = str(uuid.uuid4())
+            login = str(uuid.uuid4()).replace('-', '')[2:]  # 30 characters
         if password is None:
             password = self._get_random_password()
         data = {
