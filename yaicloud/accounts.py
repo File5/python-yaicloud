@@ -43,6 +43,8 @@ class Account:
         return "<Account '{}:{}'".format(self.login, self.password)
 
 class AccountStorage:
+    FIRST_NAMES = ["Boris", "Egor", "Gleb", "Mikhail", "Ivan", "Vladimir", "Stepan", "Petr", "Yuri"]
+    LAST_NAMES = ["Ivanov", "Smirnov", "Kuznetsov", "Popov", "Petrov", "Sokolov", "Mikhailov"]
 
     class AccountRegistrationRequest:
         def __init__(self, session, track_id, captcha_key, captcha_img_url):
@@ -54,7 +56,9 @@ class AccountStorage:
         def __repr__(self):
             return "<AccountRegistrationRequest captcha='{}'>".format(self.captcha_img_url)
 
-    def __init__(self):
+    def __init__(self, first_name=None, last_name=None):
+        self.first_name = first_name
+        self.last_name = last_name
         self.accounts = {}
 
     def get_registration_request(self):
@@ -72,10 +76,18 @@ class AccountStorage:
             login = str(uuid.uuid4()).replace('-', '')[2:]  # 30 characters
         if password is None:
             password = self._get_random_password()
+        if self.first_name is not None:
+            first_name = self.first_name
+        else:
+            first_name = random.choice(self.FIRST_NAMES)
+        if self.last_name is not None:
+            last_name = self.last_name
+        else:
+            last_name = random.choice(self.LAST_NAMES)
         data = {
             "track_id": registration_request.track_id,
-            "firstname": "Aleksandr",
-            "lastname": "Petrov",
+            "firstname": first_name,
+            "lastname": last_name,
             "surname": "",
             "login": login,
             "password": password,
@@ -91,7 +103,11 @@ class AccountStorage:
         r = registration_request.session.post('https://passport.yandex.ru/registration', data)
         if not r.ok:
             raise RequestFailed()
+        errors = r.html.xpath('//div[@class="error-message"]/text()')
+        if errors:
+            return list(map(lambda x: str(x), errors))
         self.accounts[login] = Account(login, password, session=registration_request.session)
+        return []
 
     def add_account(self, login, password):
         self.accounts[login] = Account(login, password)
