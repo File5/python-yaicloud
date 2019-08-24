@@ -73,7 +73,7 @@ class AccountStorage:
 
     def register(self, registration_request, captcha_code, login=None, password=None):
         if login is None:
-            login = str(uuid.uuid4()).replace('-', '')[2:]  # 30 characters
+            login = self._get_random_login()
         if password is None:
             password = self._get_random_password()
         if self.first_name is not None:
@@ -111,6 +111,9 @@ class AccountStorage:
 
     def add_account(self, login, password):
         self.accounts[login] = Account(login, password)
+
+    def _get_random_login(self):
+        return random.choice(string.ascii_letters) + str(uuid.uuid4()).replace('-', '')[3:]  # 30 characters, 1st is letter
 
     def _get_random_password(self, length=16):
         characters = string.ascii_letters + string.digits
