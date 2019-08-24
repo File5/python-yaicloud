@@ -1,3 +1,4 @@
+import json
 from yaicloud.accounts import Account
 from yaicloud.exceptions import DiskAuthError
 import yadisk
@@ -7,6 +8,42 @@ class Disk:
         self.app_id = app_id
         self.app_secret = app_secret
         self.y = yadisk.YaDisk(app_id, app_secret)
+
+    @staticmethod
+    def register_app(account):
+        r = account.session.get('https://oauth.yandex.ru/client/new')
+        page_data = r.html.xpath('//div[@id="root"]/@data-redux-state')[0].replace('&quot;', '"')
+        page_data = json.loads(page_data)
+        data_value = json.dumps({
+            "title": "Python yaicloud",
+            "description": "Python Yandex.Disk script",
+            "icon_id":"",
+            "is_yandex": False,
+            "homepage": "",
+            "redirect_uri": ["https://httpstat.us/200"],
+            "scopes": [
+                "cloud_api:disk.info",
+                "cloud_api:disk.app_folder",
+                "cloud_api:disk.write",
+                "cloud_api:disk.read"
+            ],
+            "platforms":["web"]
+        })
+        csrf_value = page_data['editPage']['csrf']
+        data = {
+            "data": data_value,
+            "csrf": csrf_value
+        }
+        r = account.session.post('https://oauth.yandex.ru/client/new', data)
+        app_id = r.json().get('client_id')
+        if app_id is None:
+            return None
+        r = account.session.get('https://oauth.yandex.ru/client/' + app_id)
+        info = r.html.xpath('//p[@class="clientinfo-owner-info"]/text()')
+        if len(info) == 3:
+            app_id, app_secret, app_callback_url = list(map(lambda x: x.split(':')[1].strip(), info))
+            return app_id, app_secret
+        return None
 
     def login(self, account):
         url = self.y.get_code_url()
