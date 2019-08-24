@@ -3,7 +3,7 @@ import random
 import uuid
 import string
 
-from yaicloud.exceptions import RequestFailed
+from yaicloud.exceptions import RequestFailed, AccountInvalidError, AccountHackedError
 
 class Account:
     def __init__(self, login, password, session=None):
@@ -27,6 +27,11 @@ class Account:
         r = self._session.post("https://passport.yandex.ru/auth", data)
         if not r.ok:
             raise RequestFailed()
+        account_hacked_warning = r.html.xpath('//div[@data-reason="account_hacked_no_phone"]')
+        if account_hacked_warning:
+            raise AccountHackedError()
+        if not self._check():
+            raise AccountInvalidError()
 
     def _check(self):
         r = self.session.get('https://passport.yandex.ru/profile')
