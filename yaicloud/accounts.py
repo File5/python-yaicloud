@@ -1,8 +1,10 @@
+import time
 from requests_html import HTMLSession
 import random
 import uuid
 import string
 
+from yaicloud import utils
 from yaicloud.exceptions import RequestFailed, AccountInvalidError, AccountHackedError
 
 class Account:
@@ -28,6 +30,7 @@ class Account:
         if not r.ok:
             raise RequestFailed()
         account_hacked_warning = r.html.xpath('//div[@data-reason="account_hacked_no_phone"]')
+        utils.wait()
         if account_hacked_warning:
             raise AccountHackedError()
         if not self._check():
@@ -35,6 +38,7 @@ class Account:
 
     def _check(self):
         r = self.session.get('https://passport.yandex.ru/profile')
+        utils.wait()
         if not r.ok:
             raise RequestFailed()
         first_name_div = r.html.xpath('//div[@class="personal-info__first"]')

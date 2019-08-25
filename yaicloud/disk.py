@@ -1,6 +1,7 @@
 import json
 from yaicloud.accounts import Account
 from yaicloud.exceptions import DiskAuthError
+from yaicloud import utils
 import yadisk
 
 class Disk:
@@ -9,9 +10,11 @@ class Disk:
         self.app_secret = app_secret
         self.y = yadisk.YaDisk(app_id, app_secret)
 
+    # TODO: register_app method needs some enhancement to emulate user behaviour
     @staticmethod
     def register_app(account):
         r = account.session.get('https://oauth.yandex.ru/client/new')
+        utils.wait()
         page_data = r.html.xpath('//div[@id="root"]/@data-redux-state')[0].replace('&quot;', '"')
         page_data = json.loads(page_data)
         data_value = json.dumps({
@@ -35,10 +38,12 @@ class Disk:
             "csrf": csrf_value
         }
         r = account.session.post('https://oauth.yandex.ru/client/new', data)
+        utils.wait()
         app_id = r.json().get('client_id')
         if app_id is None:
             return None
         r = account.session.get('https://oauth.yandex.ru/client/' + app_id)
+        utils.wait()
         info = r.html.xpath('//p[@class="clientinfo-owner-info"]/text()')
         if len(info) == 3:
             app_id, app_secret, app_callback_url = list(map(lambda x: x.split(':')[1].strip(), info))
@@ -48,14 +53,17 @@ class Disk:
     def login(self, account):
         url = self.y.get_code_url()
         r = account.session.get(url)
+        utils.wait()
 
         csrf = r.html.xpath('//input[@name="csrf"]/@value')[0]
         request_id = r.html.xpath('//input[@name="request_id"]/@value')[0]
         data = {
-            "granted_scopes": "cloud_api:disk.write",
-            "granted_scopes": "cloud_api:disk.read",
-            "granted_scopes": "cloud_api:disk.info",
-            "granted_scopes": "cloud_api:disk.app_folder",
+            "granted_scopes": [
+                "cloud_api:disk.write",
+                "cloud_api:disk.read",
+                "cloud_api:disk.info",
+                "cloud_api:disk.app_folder",
+            ],
             "csrf": csrf,
             "response_type": "code",
             "redirect_uri": "https://httpstat.us/200",
@@ -73,6 +81,7 @@ class Disk:
 
         allow_url = "https://oauth.yandex.ru/authorize/allow?response_type=code&client_id={}&display=popup&force_confirm=yes".format(self.app_id)
         r = account.session.post(allow_url, data)
+        utils.wait()
         i = r.url.find('code=')
         code = r.url[i + len('code='):]
 
